@@ -91,29 +91,40 @@
     </footer>
 
     <!-- APPLICATION LOGIC & FIREBASE SYNC -->
-  <script type="module">
-  // 1. Firebase SDK Imports
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    <script type="module">
+        // 1. Firebase SDK Modular Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  // 2. Firebase Configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDd_pefUa4e-r8JqLHPfL_ybw-0xJ0UVt4",
-    authDomain: "reunionquiz.firebaseapp.com",
-    projectId: "reunionquiz",
-    storageBucket: "reunionquiz.firebasestorage.app",
-    messagingSenderId: "176867995748",
-    appId: "1:176867995748:web:089f40578be12e4d0d6f71",
-    measurementId: "G-1J8E5TQG72"
-  };
+        // 2. Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDd_pefUa4e-r8JqLHPfL_ybw-0xJ0UVt4",
+            authDomain: "reunionquiz.firebaseapp.com",
+            projectId: "reunionquiz",
+            storageBucket: "reunionquiz.firebasestorage.app",
+            messagingSenderId: "176867995748",
+            appId: "1:176867995748:web:089f40578be12e4d0d6f71",
+            measurementId: "G-1J8E5TQG72"
+        };
 
-  // 3. Initialize Firebase & Services
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+        // 3. Initialize Firebase & Services
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
 
         // Constants
         const SECRET_PIN = "1999";
@@ -719,11 +730,9 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // --- INIT ---
-        window.onload = function() {
-            initAuth();
-            renderCurrentCard();
-        };
+        // --- DIRECT INITIALIZATION ---
+        initAuth();
+        renderCurrentCard();
     </script>
 </body>
 </html>
