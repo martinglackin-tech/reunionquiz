@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#fbfbfa]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rugby Avenue — 27 Years Later</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['Newsreader', 'Playfair Display', 'Georgia', 'serif'],
+              sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              warm: {
+                50: '#faf8f5',
+                100: '#f5f0ea',
+                200: '#e8ded2',
+                300: '#d7c7b5',
+                800: '#3c342c',
+                900: '#231e19',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* Smooth card fade transitions */
+        .card-transition {
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .card-enter {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+        .card-exit-left {
+            opacity: 0;
+            transform: translateX(-24px) scale(0.98);
+            pointer-events: none;
+        }
+        .card-exit-right {
+            opacity: 0;
+            transform: translateX(24px) scale(0.98);
+            pointer-events: none;
+        }
+        /* Custom subtle scrollbar */
+        textarea::-webkit-scrollbar {
+            width: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #e2ded8;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-full font-sans text-stone-800 bg-[#fbfbfa] flex flex-col justify-between selection:bg-stone-200 selection:text-stone-900 antialiased overflow-x-hidden">
+
+    <!-- TOP MINIMAL NAV / BRAND (Ultra unobtrusive) -->
+    <header class="w-full max-w-lg mx-auto px-6 pt-6 pb-2 flex items-center justify-between text-stone-400">
+        <button onclick="window.goToCard(0)" class="text-xs uppercase tracking-widest font-semibold hover:text-stone-700 transition flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-stone-300"></span>
+            <span>Rugby Ave</span>
+        </button>
+
+        <div id="user-indicator" class="text-xs font-medium text-stone-500 hidden">
+            <!-- Dynamically populated with active name -->
+        </div>
+    </header>
+
+    <!-- MAIN APP VIEWPORT (Card Stage) -->
+    <main class="flex-1 max-w-lg w-full mx-auto px-4 py-2 flex flex-col justify-center relative">
+        <div id="card-stage" class="w-full">
+            <!-- CARDS ARE DYNAMICALLY RENDERED HERE -->
+        </div>
+    </main>
+
+    <!-- SUBTLE MINIMAL FOOTER -->
+    <footer class="w-full max-w-lg mx-auto px-6 py-4 text-center">
+        <p class="text-[11px] text-stone-400 font-light">1999 — 2026 • 27 Years Later</p>
+    </footer>
+
+    <!-- APPLICATION LOGIC & FIREBASE SYNC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "",
+                authDomain: "reunion-demo.firebaseapp.com",
+                projectId: "reunion-demo",
+                storageBucket: "reunion-demo.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:demo"
+            };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
+
+        // Firebase Instances
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Constants
+        const SECRET_PIN = "1999";
+        const FRIENDS = ['Adele', 'Anne', 'Camille', 'Martin'];
+
+        // Q4 Target Rotation so everyone describes someone ahead of time
+        const Q4_ASSIGNMENTS = {
+            'Adele': 'Anne',
+            'Anne': 'Camille',
+            'Camille': 'Martin',
+            'Martin': 'Adele'
+        };
+
+        const BASE_QUESTIONS = [
+            { id: 'q1', title: 'What would you want to tell your 19 year old self?' },
+            { id: 'q2', title: 'What is a moment from our Rugby Avenue days that you will never forget?' },
+            { id: 'q3', title: 'Tell us about something you are proud of.' },
+            { id: 'q4', title: 'What 3 words would you use to describe [Friend]?' },
+            { id: 'q5', title: 'What is your #1 bucket list travel destination?' },
+            { id: 'q6', title: 'What have you learned about yourself in the last 27 years?' },
+            { id: 'q7', title: 'How do you feel about getting older?' },
+            { id: 'q8', title: 'Tell us about a moment you were happy.' }
+        ];
+
+        // State
+        let currentUser = null;
+        let selectedName = localStorage.getItem('reunion_name') || '';
+        let currentCardIndex = 0; // 0 = Name Selector, 1..8 = Questions, 9 = Thank you, 10 = PIN, 11 = Unlocked Deck
+        let myAnswers = {};
+        let allResponses = [];
+        let isGloballyUnlocked = localStorage.getItem('reunion_unlocked') === 'true';
+        let saveDebounceTimer = null;
+
+        // View Mode inside Unlocked card: 'story' (one slide at a time) or 'digest' (clean list)
+        let unlockedViewMode = 'story';
+        let unlockedStoryIdx = 0;
+
+        // Swipe Gesture Tracking
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // --- AUTHENTICATION ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth init error:", err);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                subscribeToResponses();
+                subscribeToGlobalSettings();
+            }
+        });
+
+        // --- FIRESTORE SYNC ---
+        function getResponsesCollectionRef() {
+            return collection(db, 'artifacts', appId, 'public', 'data', 'reunion_responses');
+        }
+
+        function getSettingsDocRef() {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'reunion_settings', 'global');
+        }
+
+        function subscribeToResponses() {
+            if (!currentUser) return;
+            onSnapshot(getResponsesCollectionRef(), (snapshot) => {
+                allResponses = [];
+                snapshot.forEach(docSnap => {
+                    allResponses.push(docSnap.data());
+                });
+
+                if (selectedName) {
+                    const found = allResponses.find(r => r.name === selectedName);
+                    if (found && found.answers) {
+                        myAnswers = { ...found.answers, ...myAnswers };
+                    }
+                }
+
+                // If currently viewing the answers deck, refresh it quietly
+                if (currentCardIndex === 11) {
+                    renderUnlockedFeed();
+                }
+            }, (err) => {
+                console.error("Firestore read error:", err);
+            });
+        }
+
+        function subscribeToGlobalSettings() {
+            if (!currentUser) return;
+            onSnapshot(getSettingsDocRef(), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().unlocked) {
+                    isGloballyUnlocked = true;
+                    localStorage.setItem('reunion_unlocked', 'true');
+                }
+            }, (err) => console.error(err));
+        }
+
+        async function saveMyAnswersToCloud() {
+            if (!currentUser || !selectedName) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reunion_responses', selectedName.toLowerCase());
+                await setDoc(docRef, {
+                    name: selectedName,
+                    answers: myAnswers,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (e) {
+                console.error("Save error:", e);
+            }
+        }
+
+        async function triggerGlobalUnlock() {
+            try {
+                await setDoc(getSettingsDocRef(), { unlocked: true }, { merge: true });
+                isGloballyUnlocked = true;
+                localStorage.setItem('reunion_unlocked', 'true');
+            } catch (e) {
+                console.error("Unlock error:", e);
+            }
+        }
+
+        // --- DYNAMIC QUESTION GENERATOR ---
+        function getQuestionData(idx) {
+            const base = BASE_QUESTIONS[idx];
+            if (base.id === 'q4') {
+                const target = Q4_ASSIGNMENTS[selectedName] || 'the person to your left';
+                return {
+                    id: 'q4',
+                    title: `What 3 words would you use to describe ${target}?`,
+                    targetFriend: target
+                };
+            }
+            return base;
+        }
+
+        // --- CARD NAVIGATION & RENDERING ---
+        window.goToCard = function(targetIdx) {
+            saveCurrentInput();
+            currentCardIndex = targetIdx;
+            renderCurrentCard();
+        };
+
+        window.nextCard = function() {
+            saveCurrentInput();
+            saveMyAnswersToCloud();
+
+            if (currentCardIndex >= 1 && currentCardIndex <= 7) {
+                currentCardIndex++;
+                renderCurrentCard();
+            } else if (currentCardIndex === 8) {
+                // Submit action on Q8
+                window.handleSubmitAnswers();
+            }
+        };
+
+        window.prevCard = function() {
+            saveCurrentInput();
+            saveMyAnswersToCloud();
+
+            if (currentCardIndex > 1) {
+                currentCardIndex--;
+                renderCurrentCard();
+            } else if (currentCardIndex === 1) {
+                currentCardIndex = 0; // Go back to name selection
+                renderCurrentCard();
+            }
+        };
+
+        function saveCurrentInput() {
+            const textarea = document.getElementById('card-answer-input');
+            if (textarea && currentCardIndex >= 1 && currentCardIndex <= 8) {
+                const qId = BASE_QUESTIONS[currentCardIndex - 1].id;
+                myAnswers[qId] = textarea.value.trim();
+            }
+        }
+
+        window.selectName = function(name) {
+            selectedName = name;
+            localStorage.setItem('reunion_name', name);
+            
+            const existing = allResponses.find(r => r.name === name);
+            if (existing && existing.answers) {
+                myAnswers = existing.answers;
+            }
+
+            // Visual feedback on selected tile, then auto-advance to Card 1
+            const btn = document.getElementById(`name-btn-${name}`);
+            if (btn) {
+                btn.classList.add('ring-2', 'ring-stone-900', 'bg-stone-900', 'text-white');
+            }
+
+            setTimeout(() => {
+                currentCardIndex = 1;
+                renderCurrentCard();
+            }, 180);
+        };
+
+        window.handleSubmitAnswers = function() {
+            saveCurrentInput();
+            saveMyAnswersToCloud();
+            currentCardIndex = 9; // Thank you card
+            renderCurrentCard();
+            triggerConfetti();
+        };
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 70,
+                    spread: 60,
+                    origin: { y: 0.65 },
+                    colors: ['#e07a5f', '#3d405b', '#81b29a', '#f2cc8f']
+                });
+            }
+        }
+
+        // --- RENDER CARD ROUTER ---
+        function renderCurrentCard() {
+            const stage = document.getElementById('card-stage');
+            const userIndicator = document.getElementById('user-indicator');
+
+            // Update top header indicator
+            if (selectedName && currentCardIndex > 0 && currentCardIndex <= 9) {
+                userIndicator.classList.remove('hidden');
+                userIndicator.innerHTML = `<span>${selectedName}</span> <span class="text-stone-300 mx-1">•</span> <span class="text-stone-400">${currentCardIndex <= 8 ? `${currentCardIndex}/8` : 'Complete'}</span>`;
+            } else {
+                userIndicator.classList.add('hidden');
+            }
+
+            // CARD 0: LANDING / NAME SELECTION
+            if (currentCardIndex === 0) {
+                stage.innerHTML = `
+                    <div class="bg-white rounded-3xl p-7 sm:p-9 shadow-sm border border-stone-200/70 card-transition card-enter text-center">
+                        <span class="inline-block text-[11px] font-semibold tracking-wider uppercase text-stone-400 mb-2">Reunion 2026</span>
+                        <h1 class="text-2xl sm:text-3xl font-serif font-medium text-stone-900 mb-2 tracking-tight">Who is answering?</h1>
+                        <p class="text-xs text-stone-500 mb-8 max-w-xs mx-auto">Select your name to begin. Tap to automatically advance.</p>
+
+                        <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto mb-4">
+                            ${FRIENDS.map(name => `
+                                <button 
+                                    id="name-btn-${name}"
+                                    onclick="window.selectName('${name}')"
+                                    class="py-4 px-3 rounded-2xl border text-sm font-medium transition-all active:scale-95 text-stone-800 ${selectedName === name ? 'border-stone-900 bg-stone-50 font-semibold' : 'border-stone-200 hover:border-stone-300 bg-white'}"
+                                >
+                                    ${name}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // CARDS 1 to 8: QUESTION CARDS
+            if (currentCardIndex >= 1 && currentCardIndex <= 8) {
+                const qIdx = currentCardIndex - 1;
+                const q = getQuestionData(qIdx);
+                const currentAnswer = myAnswers[q.id] || '';
+                const isLast = currentCardIndex === 8;
+
+                stage.innerHTML = `
+                    <div id="touch-card" class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter flex flex-col justify-between min-h-[430px]">
+                        <div>
+                            <!-- Step indicator & subtle question number -->
+                            <div class="flex items-center justify-between mb-5">
+                                <span class="text-[11px] font-semibold tracking-wider uppercase text-stone-400">Question ${currentCardIndex} of 8</span>
+                                <span class="text-[11px] text-stone-400 font-medium">Swipe enabled</span>
+                            </div>
+
+                            <!-- Question Headline in warm editorial serif -->
+                            <h2 class="text-xl sm:text-2xl font-serif font-medium text-stone-900 leading-snug tracking-tight mb-5">
+                                ${q.title}
+                            </h2>
+
+                            <!-- Clean Minimal Textarea -->
+                            <div class="relative">
+                                <textarea 
+                                    id="card-answer-input"
+                                    rows="5"
+                                    placeholder="Write your thoughts..."
+                                    class="w-full bg-stone-50/70 border border-stone-200 rounded-2xl p-4 text-stone-800 placeholder-stone-400 focus:outline-none focus:bg-white focus:border-stone-400 focus:ring-1 focus:ring-stone-300 transition text-sm sm:text-base leading-relaxed resize-none"
+                                >${escapeHtml(currentAnswer)}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- ONLY Back and Next / Submit Buttons at Bottom -->
+                        <div class="flex items-center justify-between pt-5 mt-4 border-t border-stone-100">
+                            <button 
+                                onclick="window.prevCard()" 
+                                class="text-xs font-semibold text-stone-500 hover:text-stone-800 px-3 py-2.5 rounded-xl transition active:scale-95"
+                            >
+                                Back
+                            </button>
+
+                            <button 
+                                onclick="window.nextCard()" 
+                                class="px-6 py-2.5 rounded-full ${isLast ? 'bg-stone-900 hover:bg-stone-800 text-white font-semibold' : 'bg-stone-900 hover:bg-stone-800 text-white font-medium'} text-xs sm:text-sm tracking-tight transition-all active:scale-95 shadow-xs"
+                            >
+                                ${isLast ? 'Submit Answers' : 'Next'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Auto-save typing debounce
+                const textarea = document.getElementById('card-answer-input');
+                if (textarea) {
+                    textarea.addEventListener('input', () => {
+                        myAnswers[q.id] = textarea.value.trim();
+                        clearTimeout(saveDebounceTimer);
+                        saveDebounceTimer = setTimeout(() => {
+                            saveMyAnswersToCloud();
+                        }, 800);
+                    });
+                }
+
+                // Attach touch listeners for horizontal swipe
+                attachCardSwipeListener();
+                return;
+            }
+
+            // CARD 9: THANK YOU & SECRET PIN BUTTON
+            if (currentCardIndex === 9) {
+                stage.innerHTML = `
+                    <div class="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-stone-200/70 card-transition card-enter text-center">
+                        <div class="w-12 h-12 bg-stone-100 text-stone-800 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                            ✓
+                        </div>
+
+                        <span class="inline-block text-[11px] font-semibold tracking-wider uppercase text-stone-400 mb-1">Submitted</span>
+                        <h2 class="text-2xl sm:text-3xl font-serif font-medium text-stone-900 mb-2 tracking-tight">Thank you, ${selectedName}!</h2>
+                        <p class="text-xs sm:text-sm text-stone-500 mb-8 max-w-xs mx-auto leading-relaxed">
+                            Your answers are saved. When everyone is ready, enter the secret PIN to reveal all group answers.
+                        </p>
+
+                        <div class="space-y-2.5 max-w-xs mx-auto">
+                            <button 
+                                onclick="window.goToCard(10)" 
+                                class="w-full py-3.5 px-4 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold tracking-wide uppercase transition active:scale-95 shadow-xs"
+                            >
+                                Secret PIN
+                            </button>
+
+                            <button 
+                                onclick="window.goToCard(1)" 
+                                class="w-full py-2.5 px-4 text-xs font-medium text-stone-400 hover:text-stone-700 transition"
+                            >
+                                Review my answers
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // CARD 10: PIN ENTRY CARD
+            if (currentCardIndex === 10) {
+                stage.innerHTML = `
+                    <div class="bg-white rounded-3xl p-7 sm:p-9 shadow-sm border border-stone-200/70 card-transition card-enter text-center max-w-sm mx-auto">
+                        <span class="inline-block text-[11px] font-semibold tracking-wider uppercase text-stone-400 mb-1">Reunion PIN</span>
+                        <h2 class="text-xl font-serif font-medium text-stone-900 mb-2">Enter Secret PIN</h2>
+                        <p class="text-xs text-stone-500 mb-6">Enter the 4-digit reunion passcode to unlock all answers.</p>
+
+                        <form onsubmit="window.handlePinSubmit(event)" class="space-y-4">
+                            <input 
+                                type="password" 
+                                id="pin-field"
+                                maxlength="4"
+                                pattern="[0-9]*"
+                                inputmode="numeric"
+                                placeholder="••••" 
+                                autofocus
+                                class="w-40 mx-auto text-center text-2xl tracking-[0.5em] font-mono bg-stone-50 border border-stone-300 rounded-xl py-3 text-stone-900 focus:outline-none focus:border-stone-900 transition"
+                            >
+
+                            <div id="pin-error" class="text-xs text-rose-600 font-medium hidden">
+                                Incorrect PIN. Please try again.
+                            </div>
+
+                            <div class="flex items-center justify-between pt-4 border-t border-stone-100 gap-2">
+                                <button 
+                                    type="button"
+                                    onclick="window.goToCard(9)" 
+                                    class="text-xs font-semibold text-stone-500 hover:text-stone-800 px-3 py-2 transition"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button 
+                                    type="submit" 
+                                    class="px-5 py-2.5 rounded-full bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold tracking-tight transition active:scale-95 shadow-xs"
+                                >
+                                    Unlock Group Answers
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                setTimeout(() => {
+                    const el = document.getElementById('pin-field');
+                    if (el) el.focus();
+                }, 100);
+                return;
+            }
+
+            // CARD 11: UNLOCKED ANSWERS DECK (Clean & Minimal)
+            if (currentCardIndex === 11) {
+                renderUnlockedFeed();
+                return;
+            }
+        }
+
+        // --- PIN VERIFICATION ---
+        window.handlePinSubmit = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('pin-field');
+            const err = document.getElementById('pin-error');
+            if (input && input.value.trim() === SECRET_PIN) {
+                triggerGlobalUnlock();
+                currentCardIndex = 11;
+                renderCurrentCard();
+            } else {
+                if (err) err.classList.remove('hidden');
+                if (input) {
+                    input.value = '';
+                    input.classList.add('border-rose-400');
+                }
+            }
+        };
+
+        // --- UNLOCKED GROUP ANSWERS VIEWER ---
+        function renderUnlockedFeed() {
+            const stage = document.getElementById('card-stage');
+            
+            // Build flat list of all answered slides
+            const allSlides = [];
+            BASE_QUESTIONS.forEach((q, qIdx) => {
+                FRIENDS.forEach(friend => {
+                    const person = allResponses.find(r => r.name === friend);
+                    const ans = person && person.answers ? person.answers[q.id] : '';
+                    if (ans && ans.trim().length > 0) {
+                        let dynamicTitle = q.title;
+                        if (q.id === 'q4') {
+                            const target = Q4_ASSIGNMENTS[friend] || 'their friend';
+                            dynamicTitle = `What 3 words would you use to describe ${target}?`;
+                        }
+                        allSlides.push({
+                            questionNum: qIdx + 1,
+                            questionTitle: dynamicTitle,
+                            friend: friend,
+                            text: ans
+                        });
+                    }
+                });
+            });
+
+            if (unlockedViewMode === 'story') {
+                if (allSlides.length === 0) {
+                    stage.innerHTML = `
+                        <div class="bg-white rounded-3xl p-8 shadow-sm border border-stone-200/70 text-center card-transition card-enter">
+                            <h3 class="text-lg font-serif font-medium text-stone-900 mb-1">Waiting for Answers</h3>
+                            <p class="text-xs text-stone-500 mb-6">No one has submitted answers to the cloud yet.</p>
+                            <button onclick="window.goToCard(1)" class="text-xs font-semibold text-stone-800 underline">Add My Answers</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (unlockedStoryIdx >= allSlides.length) unlockedStoryIdx = 0;
+                const slide = allSlides[unlockedStoryIdx];
+
+                stage.innerHTML = `
+                    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter flex flex-col justify-between min-h-[440px]">
+                        <div>
+                            <!-- Minimal Header Switcher -->
+                            <div class="flex items-center justify-between mb-4 text-xs">
+                                <span class="text-stone-400 font-semibold tracking-wider uppercase text-[11px]">Q${slide.questionNum} • ${slide.friend}</span>
+                                <button onclick="window.toggleUnlockedView('digest')" class="text-stone-400 hover:text-stone-700 font-medium text-[11px]">View All as List</button>
+                            </div>
+
+                            <h3 class="text-sm sm:text-base font-sans font-medium text-stone-500 mb-6 leading-snug">
+                                ${slide.questionTitle}
+                            </h3>
+
+                            <div class="my-3 py-2">
+                                <p class="text-lg sm:text-xl font-serif italic text-stone-800 leading-relaxed">
+                                    "${escapeHtml(slide.text)}"
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pt-5 mt-4 border-t border-stone-100 flex items-center justify-between">
+                            <button onclick="window.prevStorySlide()" class="text-xs font-semibold text-stone-500 hover:text-stone-800 px-3 py-2 transition disabled:opacity-30" ${unlockedStoryIdx === 0 ? 'disabled' : ''}>
+                                Prev
+                            </button>
+
+                            <span class="text-[11px] font-mono text-stone-400">${unlockedStoryIdx + 1} / ${allSlides.length}</span>
+
+                            <button onclick="window.nextStorySlide()" class="text-xs font-semibold bg-stone-900 hover:bg-stone-800 text-white px-5 py-2 rounded-full transition active:scale-95 disabled:opacity-30" ${unlockedStoryIdx === allSlides.length - 1 ? 'disabled' : ''}>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // DIGEST / LIST MODE
+                stage.innerHTML = `
+                    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter max-h-[75vh] overflow-y-auto">
+                        <div class="flex items-center justify-between mb-6 pb-2 border-b border-stone-100">
+                            <h3 class="text-base font-serif font-medium text-stone-900">All Reunion Answers</h3>
+                            <button onclick="window.toggleUnlockedView('story')" class="text-xs text-stone-500 font-semibold hover:text-stone-800">Story Mode</button>
+                        </div>
+
+                        <div class="space-y-6">
+                            ${BASE_QUESTIONS.map((q, idx) => {
+                                const answersForQ = FRIENDS.map(f => {
+                                    const p = allResponses.find(r => r.name === f);
+                                    return {
+                                        friend: f,
+                                        ans: p && p.answers ? p.answers[q.id] : null
+                                    };
+                                }).filter(item => item.ans && item.ans.trim().length > 0);
+
+                                if (answersForQ.length === 0) return '';
+
+                                return `
+                                    <div class="space-y-2">
+                                        <div class="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Question ${idx + 1}</div>
+                                        <h4 class="text-sm font-semibold text-stone-800">${q.id === 'q4' ? 'What 3 words would you use to describe your assigned friend?' : q.title}</h4>
+                                        <div class="space-y-2 pt-1">
+                                            ${answersForQ.map(item => `
+                                                <div class="bg-stone-50/80 rounded-xl p-3 border border-stone-100 text-xs sm:text-sm">
+                                                    <span class="font-bold text-stone-900 text-xs block mb-0.5">${item.friend}:</span>
+                                                    <p class="font-serif italic text-stone-700 leading-relaxed">${escapeHtml(item.ans)}</p>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.toggleUnlockedView = function(mode) {
+            unlockedViewMode = mode;
+            renderUnlockedFeed();
+        };
+
+        window.nextStorySlide = function() {
+            unlockedStoryIdx++;
+            renderUnlockedFeed();
+        };
+
+        window.prevStorySlide = function() {
+            if (unlockedStoryIdx > 0) {
+                unlockedStoryIdx--;
+                renderUnlockedFeed();
+            }
+        };
+
+        // --- MOBILE SWIPE GESTURES ---
+        function attachCardSwipeListener() {
+            const card = document.getElementById('touch-card');
+            if (!card) return;
+
+            card.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            card.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const touchEndY = e.changedTouches[0].screenY;
+                const diffX = touchEndX - touchStartX;
+                const diffY = touchEndY - touchStartY;
+
+                // Horizontal swipe threshold (ignore vertical scrolling)
+                if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                    if (diffX < 0) {
+                        // Swiped Left -> Next
+                        window.nextCard();
+                    } else {
+                        // Swiped Right -> Prev
+                        window.prevCard();
+                    }
+                }
+            }, { passive: true });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // --- INIT ---
+        window.onload = function() {
+            initAuth();
+            renderCurrentCard();
+        };
+    </script>
+</body>
+</html>
