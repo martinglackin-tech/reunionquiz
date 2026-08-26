@@ -91,23 +91,29 @@
     </footer>
 
     <!-- APPLICATION LOGIC & FIREBASE SYNC -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
-        // Firebase Configuration
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "",
-                authDomain: "reunion-demo.firebaseapp.com",
-                projectId: "reunion-demo",
-                storageBucket: "reunion-demo.appspot.com",
-                messagingSenderId: "123456789",
-                appId: "1:123456789:web:demo"
-            };
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDd_pefUa4e-r8JqLHPfL_ybw-0xJ0UVt4",
+    authDomain: "reunionquiz.firebaseapp.com",
+    projectId: "reunionquiz",
+    storageBucket: "reunionquiz.firebasestorage.app",
+    messagingSenderId: "176867995748",
+    appId: "1:176867995748:web:089f40578be12e4d0d6f71",
+    measurementId: "G-1J8E5TQG72"
+  };
 
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
 
         // Firebase Instances
