@@ -92,14 +92,12 @@
 
     <!-- APPLICATION LOGIC & FIREBASE SYNC -->
   <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // 1. Firebase SDK Imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  // 2. Firebase Configuration
   const firebaseConfig = {
     apiKey: "AIzaSyDd_pefUa4e-r8JqLHPfL_ybw-0xJ0UVt4",
     authDomain: "reunionquiz.firebaseapp.com",
@@ -110,16 +108,12 @@
     measurementId: "G-1J8E5TQG72"
   };
 
-  // Initialize Firebase
+  // 3. Initialize Firebase & Services
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-        // Firebase Instances
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'rugby-avenue-reunion-minimal';
 
         // Constants
         const SECRET_PIN = "1999";
