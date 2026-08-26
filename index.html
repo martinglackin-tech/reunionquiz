@@ -207,7 +207,8 @@
                 if (selectedName) {
                     const found = allResponses.find(r => r.name === selectedName);
                     if (found && found.answers) {
-                        myAnswers = { ...found.answers, ...myAnswers };
+                        // Keep current local edits if they exist, but update from cloud
+                        myAnswers = { ...found.answers, ...myAnswers }; 
                     }
                 }
 
@@ -233,6 +234,7 @@
         async function saveMyAnswersToCloud() {
             if (!currentUser || !selectedName) return;
             try {
+                // selectedName acts as the document ID to separate user answers
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reunion_responses', selectedName.toLowerCase());
                 await setDoc(docRef, {
                     name: selectedName,
@@ -313,9 +315,14 @@
             selectedName = name;
             localStorage.setItem('reunion_name', name);
             
+            // CRUCIAL FIX: Clear local memory so previous user's answers don't bleed over
+            myAnswers = {};
+            
+            // Check if the newly selected user already has answers in the cloud
             const existing = allResponses.find(r => r.name === name);
             if (existing && existing.answers) {
-                myAnswers = existing.answers;
+                // Deep copy their cloud answers into local memory
+                myAnswers = JSON.parse(JSON.stringify(existing.answers));
             }
 
             // Visual feedback on selected tile, then auto-advance to Card 1
