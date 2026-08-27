@@ -68,7 +68,7 @@
 
     <!-- TOP MINIMAL NAV / BRAND (Ultra unobtrusive) -->
     <header class="w-full max-w-lg mx-auto px-6 pt-6 pb-2 flex items-center justify-between text-stone-400">
-        <button onclick="window.goToCard(0)" class="text-xs uppercase tracking-widest font-semibold hover:text-stone-700 transition flex items-center gap-1.5">
+        <button onclick="window.goToCard(0)" class="text-xs uppercase tracking-widest font-semibold hover:text-stone-700 transition flex items-center gap-1.5" title="Home">
             <span class="w-2 h-2 rounded-full bg-stone-300"></span>
             <span>Rugby Ave</span>
         </button>
@@ -559,7 +559,10 @@
                     <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter text-left">
                         <div class="flex items-center justify-between mb-6 pb-4 border-b border-stone-100">
                             <h2 class="text-xl font-serif font-medium text-stone-900">Admin Controls</h2>
-                            <button onclick="window.goToCard(11)" class="text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-full transition">Done</button>
+                            <div class="flex gap-2">
+                                <button onclick="window.goToCard(0)" class="text-[11px] font-semibold bg-stone-50 hover:bg-stone-100 text-stone-600 px-3 py-1.5 rounded-full transition">Home</button>
+                                <button onclick="window.goToCard(11)" class="text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-full transition">Done</button>
+                            </div>
                         </div>
 
                         <div class="space-y-3 mb-8">
@@ -571,14 +574,14 @@
                                     <div class="flex items-center justify-between bg-stone-50 p-3 rounded-xl border border-stone-100">
                                         <div class="flex flex-col">
                                             <span class="text-sm font-semibold text-stone-800">${name}</span>
-                                            <span class="text-[10px] text-stone-500 mt-0.5">${hasData ? 'Answers submitted & locked' : 'Not started'}</span>
+                                            <span class="text-[10px] text-stone-500 mt-0.5">${hasData ? 'Answers submitted' : 'Not started'}</span>
                                         </div>
                                         <button 
                                             onclick="window.wipeUser('${name}')"
                                             class="px-3 py-2 rounded-lg text-[11px] font-bold transition-all uppercase tracking-wide ${hasData ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 active:scale-95' : 'bg-stone-200 text-stone-400 cursor-not-allowed opacity-50'}"
                                             ${hasData ? '' : 'disabled'}
                                         >
-                                            Reset User
+                                            Reset
                                         </button>
                                     </div>
                                 `;
@@ -647,7 +650,8 @@
                             <p class="text-xs text-stone-500 mb-6">No one has submitted answers to the cloud yet.</p>
                             <div class="flex flex-col gap-3 max-w-[200px] mx-auto">
                                 <button onclick="window.goToCard(1)" class="text-xs font-semibold text-stone-800 underline">Add My Answers</button>
-                                <button onclick="window.goToAdmin()" class="text-[10px] uppercase tracking-widest font-semibold text-stone-400 mt-4">⚙️ Admin</button>
+                                <button onclick="window.goToCard(0)" class="text-[10px] uppercase tracking-widest font-semibold text-stone-400 mt-2">Home</button>
+                                <button onclick="window.goToAdmin()" class="text-[10px] uppercase tracking-widest font-semibold text-stone-400">⚙️ Admin</button>
                             </div>
                         </div>
                     `;
@@ -661,10 +665,11 @@
                     <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter flex flex-col justify-between min-h-[440px]">
                         <div>
                             <div class="flex items-center justify-between mb-4 text-xs">
-                                <span class="text-stone-400 font-semibold tracking-wider uppercase text-[11px]">Q${slide.questionNum} • ${slide.friend}</span>
-                                <div class="flex items-center gap-3">
-                                    <button onclick="window.goToAdmin()" class="text-stone-400 hover:text-stone-700 font-medium text-[11px]">Manage</button>
-                                    <button onclick="window.toggleUnlockedView('digest')" class="text-stone-400 hover:text-stone-700 font-medium text-[11px]">List View</button>
+                                <span class="text-stone-400 font-semibold tracking-wider uppercase text-[10px] sm:text-[11px]">Q${slide.questionNum} • ${slide.friend}</span>
+                                <div class="flex items-center gap-2 sm:gap-3">
+                                    <button onclick="window.goToCard(0)" class="text-stone-400 hover:text-stone-700 font-medium text-[10px] sm:text-[11px]">Home</button>
+                                    <button onclick="window.goToAdmin()" class="text-stone-400 hover:text-stone-700 font-medium text-[10px] sm:text-[11px]">Manage</button>
+                                    <button onclick="window.toggleUnlockedView('digest')" class="text-stone-400 hover:text-stone-700 font-medium text-[10px] sm:text-[11px]">List</button>
                                 </div>
                             </div>
 
@@ -684,9 +689,10 @@
                     <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200/70 card-transition card-enter max-h-[75vh] overflow-y-auto">
                         <div class="flex items-center justify-between mb-6 pb-2 border-b border-stone-100 sticky top-0 bg-white z-10 pt-2">
                             <h3 class="text-base font-serif font-medium text-stone-900">All Answers</h3>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <button onclick="window.goToCard(0)" class="text-xs text-stone-400 font-semibold hover:text-stone-700">Home</button>
                                 <button onclick="window.goToAdmin()" class="text-xs text-stone-400 font-semibold hover:text-stone-700">Manage</button>
-                                <button onclick="window.toggleUnlockedView('story')" class="text-xs text-stone-500 font-semibold hover:text-stone-800">Story Mode</button>
+                                <button onclick="window.toggleUnlockedView('story')" class="text-xs text-stone-500 font-semibold hover:text-stone-800">Story</button>
                             </div>
                         </div>
 
